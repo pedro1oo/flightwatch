@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FlightWatch ✈️ Monitor de Passagens Aéreas</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              900: '#1e3a8a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col font-sans">
+
+  <!-- Top Navigation -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white text-xl shadow-md">
+          <i class="fa-solid fa-plane-departure"></i>
+        </div>
+        <div>
+          <h1 class="font-extrabold text-xl tracking-tight text-slate-900 leading-none">FlightWatch</h1>
+          <span class="text-xs text-slate-500 font-medium">Monitoramento Inteligente & Alerta de Passagens</span>
+        </div>
+      </div>
+
+      <!-- Status badges -->
+      <div class="flex items-center space-x-2 sm:space-x-4">
+        <div id="flight-api-status" class="hidden sm:flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+          <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+          <span>Google Flights: Conectando...</span>
+        </div>
+        <div id="smtp-status" class="hidden sm:flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+          <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+          <span>SMTP: Carregando...</span>
+        </div>
+        <button onclick="openModal('create-modal')" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-4 py-2 rounded-xl shadow-sm hover:shadow transition flex items-center space-x-2">
+          <i class="fa-solid fa-plus text-xs"></i>
+          <span>Novo Alerta</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full">
+
+    <!-- Top Banner / Info -->
+    <div class="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 rounded-2xl p-6 sm:p-8 text-white shadow-lg mb-8 relative overflow-hidden">
+      <div class="relative z-10 max-w-2xl">
+        <span class="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-500/30 text-blue-200 border border-blue-400/30 mb-3">
+          <i class="fa-solid fa-bell text-[10px]"></i>
+          <span>Sistema Automático de Alertas</span>
+        </span>
+        <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight mb-2">
+          Economize em cada viagem com monitoramento contínuo
+        </h2>
+        <p class="text-slate-300 text-sm sm:text-base leading-relaxed mb-4">
+          Cadastre os destinos dos seus clientes. O robô pesquisa os preços das companhias aéreas e, assim que o valor cai, envia um e-mail com a oportunidade!
+        </p>
+        <div class="flex flex-wrap items-center gap-3">
+          <button onclick="checkAllAlerts()" id="btn-check-all" class="bg-white text-blue-900 hover:bg-blue-50 font-bold text-sm px-4 py-2 rounded-xl transition shadow flex items-center space-x-2">
+            <i class="fa-solid fa-arrows-rotate"></i>
+            <span>Verificar Todos Agora</span>
+          </button>
+          <button onclick="openPreviewEmailModal()" class="bg-blue-800/80 hover:bg-blue-700/80 text-white border border-blue-500/40 text-sm font-semibold px-4 py-2 rounded-xl transition flex items-center space-x-2">
+            <i class="fa-regular fa-envelope"></i>
+            <span>Ver Modelo do E-mail</span>
+          </button>
+          <button onclick="openTestEmailModal()" class="bg-slate-800/80 hover:bg-slate-700/80 text-white border border-slate-600/50 text-sm font-semibold px-4 py-2 rounded-xl transition flex items-center space-x-2">
+            <i class="fa-solid fa-paper-plane"></i>
+            <span>Testar Envio SMTP</span>
+          </button>
+        </div>
+      </div>
+      <div class="absolute right-4 -bottom-10 opacity-10 text-9xl text-white pointer-events-none hidden md:block">
+        <i class="fa-solid fa-earth-americas"></i>
+      </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
+      <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex items-center justify-between">
+        <div>
+          <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Alertas Cadastrados</span>
+          <div id="stat-total" class="text-3xl font-black text-slate-800 mt-1">0</div>
+        </div>
+        <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl">
+          <i class="fa-solid fa-tags"></i>
+        </div>
+      </div>
+      <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex items-center justify-between">
+        <div>
+          <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Alertas Ativos</span>
+          <div id="stat-active" class="text-3xl font-black text-emerald-600 mt-1">0</div>
+        </div>
+        <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl">
+          <i class="fa-solid fa-radar"></i>
+        </div>
+      </div>
+      <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex items-center justify-between">
+        <div>
+          <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Status do Robô</span>
+          <div id="stat-scheduler" class="text-base font-bold text-slate-700 mt-2 flex items-center space-x-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+            <span>A cada {{ check_interval }} min</span>
+          </div>
+        </div>
+        <div class="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-xl">
+          <i class="fa-solid fa-clock-rotate-left"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- Alerts Section -->
+    <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div>
+        <h3 class="text-xl font-bold text-slate-900">Passagens Monitoradas</h3>
+        <p class="text-xs text-slate-500">Acompanhamento em tempo real de tarifas aéreas</p>
+      </div>
+      <div class="flex items-center space-x-2">
+        <button onclick="loadAlerts()" class="text-xs bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 font-semibold px-3 py-1.5 rounded-lg flex items-center space-x-1.5 shadow-sm">
+          <i class="fa-solid fa-rotate-right text-[11px]"></i>
+          <span>Atualizar Lista</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Alerts Container -->
+    <div id="alerts-loading" class="text-center py-16">
+      <i class="fa-solid fa-circle-notch fa-spin text-3xl text-blue-600"></i>
+      <p class="text-sm text-slate-500 mt-3 font-medium">Carregando passagens cadastradas...</p>
+    </div>
+
+    <div id="alerts-empty" class="hidden bg-white border border-slate-200 rounded-2xl p-12 text-center max-w-lg mx-auto shadow-sm">
+      <div class="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center text-2xl mx-auto mb-4">
+        <i class="fa-solid fa-plane"></i>
+      </div>
+      <h4 class="text-lg font-bold text-slate-800 mb-1">Nenhum alerta cadastrado ainda</h4>
+      <p class="text-sm text-slate-500 mb-6">
+        Cadastre sua primeira passagem aérea para o sistema começar a vigiar os preços e disparar notificações de oportunidade.
+      </p>
+      <button onclick="openModal('create-modal')" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-5 py-2.5 rounded-xl shadow transition">
+        Cadastrar Primeiro Alerta
+      </button>
+    </div>
+
+    <div id="alerts-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <!-- Injected via JavaScript -->
+    </div>
+
+  </main>
+
+  <!-- Modal: Cadastrar Novo Alerta -->
+  <div id="create-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden transform transition-all">
+      <div class="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+          <i class="fa-solid fa-bell text-blue-400"></i>
+          <h3 class="font-bold text-lg">Novo Alerta de Passagem</h3>
+        </div>
+        <button onclick="closeModal('create-modal')" class="text-slate-400 hover:text-white transition">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="form-create-alert" onsubmit="handleCreateAlert(event)" class="p-6 space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Nome do Cliente *</label>
+          <input type="text" id="client_name" required placeholder="Ex: Pedro Ferreira" class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">E-mail para Notificação *</label>
+          <input type="email" id="client_email" required placeholder="Ex: cliente@email.com" class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Origem (IATA) *</label>
+            <input type="text" id="origin" required maxlength="4" placeholder="GRU" value="GRU" class="w-full uppercase text-sm font-semibold px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            <span class="text-[11px] text-slate-500">Ex: GRU, GIG, BSB</span>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Destino (IATA) *</label>
+            <input type="text" id="destination" required maxlength="4" placeholder="LIS" value="LIS" class="w-full uppercase text-sm font-semibold px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            <span class="text-[11px] text-slate-500">Ex: LIS, MIA, CDG</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Data de Ida *</label>
+            <input type="date" id="departure_date" required class="w-full text-sm px-3.5 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Data de Volta (Opcional)</label>
+            <input type="date" id="return_date" class="w-full text-sm px-3.5 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+            Preço Teto Alvo (R$) <span class="text-slate-400 font-normal">(Opcional)</span>
+          </label>
+          <input type="number" step="0.01" id="max_target_price" placeholder="Ex: 3500.00" class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+          <span class="text-[11px] text-slate-500">Deixe em branco para ser avisado de qualquer queda de preço.</span>
+        </div>
+
+        <div class="pt-3 border-t border-slate-100 flex items-center justify-end space-x-3">
+          <button type="button" onclick="closeModal('create-modal')" class="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-slate-800 transition">Cancelar</button>
+          <button type="submit" id="btn-submit-create" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-5 py-2 rounded-xl shadow transition flex items-center space-x-2">
+            <span>Criar e Monitorar</span>
+            <i class="fa-solid fa-arrow-right text-xs"></i>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Histórico de Preços -->
+  <div id="history-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl overflow-hidden">
+      <div class="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
+        <div>
+          <h3 id="history-modal-title" class="font-bold text-lg">Histórico de Preços</h3>
+          <p id="history-modal-subtitle" class="text-xs text-slate-400">Verificações realizadas para esta rota</p>
+        </div>
+        <button onclick="closeModal('history-modal')" class="text-slate-400 hover:text-white transition">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+      <div class="p-6 max-h-[450px] overflow-y-auto">
+        <table class="w-full text-left text-sm">
+          <thead class="text-xs text-slate-500 uppercase border-b border-slate-200">
+            <tr>
+              <th class="py-2">Data/Hora</th>
+              <th class="py-2">Preço</th>
+              <th class="py-2">Cia Aérea</th>
+              <th class="py-2">Detalhes</th>
+            </tr>
+          </thead>
+          <tbody id="history-table-body" class="divide-y divide-slate-100">
+            <!-- Dynamic rows -->
+          </tbody>
+        </table>
+        <div id="history-empty" class="hidden text-center py-8 text-slate-400 text-sm">
+          Nenhuma verificação gravada ainda.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Teste de SMTP -->
+  <div id="test-email-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden">
+      <div class="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
+        <h3 class="font-bold text-lg">Testar Envio de E-mail</h3>
+        <button onclick="closeModal('test-email-modal')" class="text-slate-400 hover:text-white transition">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+      <div class="p-6 space-y-4">
+        <p class="text-sm text-slate-600">
+          Insira seu e-mail para enviarmos uma mensagem de teste usando as configurações SMTP atuais.
+        </p>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Destinatário</label>
+          <input type="email" id="test-email-input" placeholder="seu-email@gmail.com" class="w-full text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="pt-2 flex justify-end space-x-2">
+          <button onclick="closeModal('test-email-modal')" class="px-4 py-2 text-sm text-slate-600">Cancelar</button>
+          <button onclick="sendTestEmailAction()" id="btn-send-test" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-4 py-2 rounded-xl transition">
+            Enviar Teste
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Preview do E-mail -->
+  <div id="preview-email-modal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-3xl h-[85vh] flex flex-col overflow-hidden">
+      <div class="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
+        <div>
+          <h3 class="font-bold text-lg">Pré-visualização do E-mail de Alerta</h3>
+          <p class="text-xs text-slate-400">Modelo HTML que o cliente recebe quando a passagem cai de preço</p>
+        </div>
+        <button onclick="closeModal('preview-email-modal')" class="text-slate-400 hover:text-white transition">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+      <div class="flex-1 bg-slate-100 p-2 sm:p-4 overflow-hidden">
+        <iframe id="preview-iframe" class="w-full h-full rounded-xl bg-white border border-slate-200" src="/api/preview-last-email"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 space-y-2"></div>
+
+  <!-- Footer -->
+  <footer class="bg-white border-t border-slate-200 py-6 mt-12 text-center text-xs text-slate-400">
+    <p>FlightWatch • Monitoramento automatizado de passagens aéreas com notificações por e-mail.</p>
+  </footer>
+
+  <!-- Frontend Logic -->
+  <script>
+    // Inicialização
+    document.addEventListener("DOMContentLoaded", () => {
+      // Define data mínima de ida para amanhã
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 15);
+      document.getElementById("departure_date").value = tomorrow.toISOString().split("T")[0];
+
+      const returnDay = new Date();
+      returnDay.setDate(returnDay.getDate() + 25);
+      document.getElementById("return_date").value = returnDay.toISOString().split("T")[0];
+
+      checkSystemStatus();
+      loadAlerts();
+    });
+
+    // Toast helper
+    function showToast(message, type = "info") {
+      const container = document.getElementById("toast-container");
+      const toast = document.createElement("div");
+      const bg = type === "success" ? "bg-emerald-600" : type === "error" ? "bg-rose-600" : "bg-slate-900";
+      const icon = type === "success" ? "fa-circle-check" : type === "error" ? "fa-circle-xmark" : "fa-circle-info";
+
+      toast.className = `${bg} text-white px-4 py-3 rounded-xl shadow-lg flex items-center space-x-3 text-sm transition-all duration-300 transform translate-y-2 opacity-0`;
+      toast.innerHTML = `<i class="fa-solid ${icon}"></i><span>${message}</span>`;
+      
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.classList.remove("translate-y-2", "opacity-0");
+      }, 10);
+
+      setTimeout(() => {
+        toast.classList.add("opacity-0", "translate-y-2");
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+
+    // Modal helpers
+    function openModal(id) {
+      document.getElementById(id).classList.remove("hidden");
+    }
+    function closeModal(id) {
+      document.getElementById(id).classList.add("hidden");
+    }
+
+    function openPreviewEmailModal() {
+      const iframe = document.getElementById("preview-iframe");
+      iframe.src = "/api/preview-last-email?t=" + new Date().getTime();
+      openModal("preview-email-modal");
+    }
+
+    function openTestEmailModal() {
+      openModal("test-email-modal");
+    }
+
+    // Status do Sistema (Google Flights + SMTP)
+    async function checkSystemStatus() {
+      try {
+        const res = await fetch("/api/system-status");
+        const data = await res.json();
+
+        // Google Flights status badge
+        const flightEl = document.getElementById("flight-api-status");
+        if (data.flight_api_configured) {
+          flightEl.className = "flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200";
+          flightEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500"></span><span>Google Flights Ativo</span>`;
+        } else {
+          flightEl.className = "flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 cursor-pointer";
+          flightEl.title = "Configure SERPAPI_KEY no arquivo .env para buscar dados reais do Google Flights";
+          flightEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500"></span><span>Modo Simulação (Ativo)</span>`;
+        }
+        flightEl.classList.remove("hidden");
+
+        // SMTP status badge
+        const smtpEl = document.getElementById("smtp-status");
+        if (data.smtp_configured) {
+          smtpEl.className = "flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200";
+          smtpEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500"></span><span>SMTP Configurado</span>`;
+        } else {
+          smtpEl.className = "flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 cursor-pointer";
+          smtpEl.title = "Configure SMTP_USER e SMTP_PASSWORD no .env para envio real";
+          smtpEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-blue-400"></span><span>Preview Web de E-mails</span>`;
+        }
+        smtpEl.classList.remove("hidden");
+
+      } catch (err) {
+        console.error("Erro ao verificar status:", err);
+      }
+    }
+
+    // Carregar Alertas
+    async function loadAlerts() {
+      const loading = document.getElementById("alerts-loading");
+      const empty = document.getElementById("alerts-empty");
+      const grid = document.getElementById("alerts-grid");
+
+      loading.classList.remove("hidden");
+      empty.classList.add("hidden");
+      grid.innerHTML = "";
+
+      try {
+        const res = await fetch("/api/alerts");
+        const alerts = await res.json();
+
+        loading.classList.add("hidden");
+
+        document.getElementById("stat-total").innerText = alerts.length;
+        document.getElementById("stat-active").innerText = alerts.filter(a => a.is_active).length;
+
+        if (alerts.length === 0) {
+          empty.classList.remove("hidden");
+          return;
+        }
+
+        alerts.forEach(alert => {
+          grid.appendChild(createAlertCard(alert));
+        });
+
+      } catch (err) {
+        loading.classList.add("hidden");
+        showToast("Erro ao carregar lista de alertas.", "error");
+      }
+    }
+
+    // Criar Card do Alerta
+    function createAlertCard(alert) {
+      const card = document.createElement("div");
+      card.className = "bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition p-5 flex flex-col justify-between";
+
+      const hasPrice = alert.last_seen_price !== null;
+      const formattedPrice = hasPrice ? `R$ ${alert.last_seen_price.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : "Aguardando";
+      const formattedLowest = alert.lowest_historical_price ? `R$ ${alert.lowest_historical_price.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : "—";
+      const formattedTarget = alert.max_target_price ? `R$ ${alert.max_target_price.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : "Qualquer queda";
+
+      const statusBadge = alert.is_active
+        ? `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">Ativo</span>`
+        : `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-500">Pausado</span>`;
+
+      const lastCheckedStr = alert.last_checked_at
+        ? new Date(alert.last_checked_at).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})
+        : "Nunca";
+
+      card.innerHTML = `
+        <div>
+          <!-- Header do card -->
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center space-x-2">
+              <span class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs">
+                ${alert.origin}
+              </span>
+              <i class="fa-solid fa-arrow-right-long text-slate-300 text-xs"></i>
+              <span class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs">
+                ${alert.destination}
+              </span>
+            </div>
+            ${statusBadge}
+          </div>
+
+          <!-- Informações do passageiro -->
+          <div class="mb-4">
+            <h4 class="font-bold text-slate-900 text-base leading-tight">${alert.client_name}</h4>
+            <span class="text-xs text-slate-500 truncate block">${alert.client_email}</span>
+          </div>
+
+          <!-- Datas -->
+          <div class="bg-slate-50 rounded-xl p-3 mb-4 space-y-1 text-xs">
+            <div class="flex items-center justify-between text-slate-600">
+              <span><i class="fa-regular fa-calendar-check mr-1.5 text-blue-500"></i>Ida:</span>
+              <span class="font-semibold text-slate-800">${alert.departure_date}</span>
+            </div>
+            ${alert.return_date ? `
+            <div class="flex items-center justify-between text-slate-600">
+              <span><i class="fa-regular fa-calendar-xmark mr-1.5 text-indigo-500"></i>Volta:</span>
+              <span class="font-semibold text-slate-800">${alert.return_date}</span>
+            </div>` : ''}
+          </div>
+
+          <!-- Preços -->
+          <div class="border-t border-slate-100 pt-3 mb-4">
+            <div class="flex items-baseline justify-between">
+              <div>
+                <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Último Preço</span>
+                <span class="text-xl font-extrabold ${hasPrice ? 'text-blue-600' : 'text-slate-400'}">${formattedPrice}</span>
+              </div>
+              <div class="text-right">
+                <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Menor Histórico</span>
+                <span class="text-xs font-bold text-emerald-600">${formattedLowest}</span>
+              </div>
+            </div>
+            <div class="mt-2 text-xs flex justify-between text-slate-500">
+              <span>Preço Alvo: <strong>${formattedTarget}</strong></span>
+              <span>Cia: <strong>${alert.airline || '—'}</strong></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ações do Card -->
+        <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+          <span class="text-[11px] text-slate-400">Checado às ${lastCheckedStr}</span>
+          <div class="flex items-center space-x-1">
+            <button onclick="checkSingleAlert(${alert.id}, this)" title="Verificar preço agora" class="w-8 h-8 rounded-lg hover:bg-blue-50 text-slate-600 hover:text-blue-600 transition flex items-center justify-center text-xs">
+              <i class="fa-solid fa-arrows-rotate"></i>
+            </button>
+            <button onclick="viewHistory(${alert.id}, '${alert.origin}', '${alert.destination}')" title="Ver Histórico de Preços" class="w-8 h-8 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition flex items-center justify-center text-xs">
+              <i class="fa-solid fa-chart-line"></i>
+            </button>
+            <button onclick="toggleAlertStatus(${alert.id})" title="${alert.is_active ? 'Pausar' : 'Ativar'}" class="w-8 h-8 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition flex items-center justify-center text-xs">
+              <i class="fa-solid ${alert.is_active ? 'fa-pause' : 'fa-play'}"></i>
+            </button>
+            <button onclick="deleteAlert(${alert.id})" title="Excluir Alerta" class="w-8 h-8 rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition flex items-center justify-center text-xs">
+              <i class="fa-regular fa-trash-can"></i>
+            </button>
+          </div>
+        </div>
+      `;
+
+      return card;
+    }
+
+    // Criar Alerta
+    async function handleCreateAlert(e) {
+      e.preventDefault();
+      const btn = document.getElementById("btn-submit-create");
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i><span>Salvando...</span>`;
+
+      const targetPriceVal = document.getElementById("max_target_price").value;
+
+      const payload = {
+        client_name: document.getElementById("client_name").value.trim(),
+        client_email: document.getElementById("client_email").value.trim(),
+        origin: document.getElementById("origin").value.trim().toUpperCase(),
+        destination: document.getElementById("destination").value.trim().toUpperCase(),
+        departure_date: document.getElementById("departure_date").value,
+        return_date: document.getElementById("return_date").value || null,
+        max_target_price: targetPriceVal ? parseFloat(targetPriceVal) : null
+      };
+
+      try {
+        const res = await fetch("/api/alerts", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.detail || "Erro ao criar alerta.");
+        }
+
+        closeModal("create-modal");
+        showToast("Alerta criado! Primeira checagem de preço executada.", "success");
+        loadAlerts();
+
+      } catch (err) {
+        showToast(err.message, "error");
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<span>Criar e Monitorar</span><i class="fa-solid fa-arrow-right text-xs"></i>`;
+      }
+    }
+
+    // Verificar Alerta Individual
+    async function checkSingleAlert(id, buttonEl) {
+      const icon = buttonEl.querySelector("i");
+      icon.classList.add("fa-spin");
+
+      try {
+        const res = await fetch(`/api/alerts/${id}/check`, { method: "POST" });
+        const result = await res.json();
+
+        if (result.price_dropped) {
+          showToast(`Queda de preço para R$ ${result.current_price.toFixed(2)}! E-mail enviado ao cliente!`, "success");
+        } else {
+          showToast(`Preço atual: R$ ${result.current_price.toFixed(2)} (Sem queda no momento)`);
+        }
+        loadAlerts();
+      } catch (err) {
+        showToast("Erro ao verificar preço.", "error");
+      } finally {
+        icon.classList.remove("fa-spin");
+      }
+    }
+
+    // Verificar Todos Alertas
+    async function checkAllAlerts() {
+      const btn = document.getElementById("btn-check-all");
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i><span>Consultando voos...</span>`;
+
+      try {
+        const res = await fetch("/api/alerts/check-all", { method: "POST" });
+        const results = await res.json();
+        
+        const drops = results.filter(r => r.price_dropped).length;
+        if (drops > 0) {
+          showToast(`${drops} oportunidade(s) detectada(s) e e-mails disparados!`, "success");
+        } else {
+          showToast(`Verificação concluída para ${results.length} alerta(s).`);
+        }
+        loadAlerts();
+      } catch (err) {
+        showToast("Erro ao verificar alertas.", "error");
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-arrows-rotate"></i><span>Verificar Todos Agora</span>`;
+      }
+    }
+
+    // Ativar / Pausar Alerta
+    async function toggleAlertStatus(id) {
+      try {
+        await fetch(`/api/alerts/${id}/toggle`, { method: "POST" });
+        loadAlerts();
+      } catch (err) {
+        showToast("Erro ao alterar status.", "error");
+      }
+    }
+
+    // Deletar Alerta
+    async function deleteAlert(id) {
+      if (!confirm("Deseja realmente remover este monitoramento?")) return;
+      try {
+        await fetch(`/api/alerts/${id}`, { method: "DELETE" });
+        showToast("Alerta removido com sucesso.");
+        loadAlerts();
+      } catch (err) {
+        showToast("Erro ao remover alerta.", "error");
+      }
+    }
+
+    // Ver Histórico
+    async function viewHistory(id, origin, destination) {
+      document.getElementById("history-modal-title").innerText = `Histórico: ${origin} ➔ ${destination}`;
+      const tbody = document.getElementById("history-table-body");
+      const empty = document.getElementById("history-empty");
+      tbody.innerHTML = "";
+      empty.classList.add("hidden");
+
+      openModal("history-modal");
+
+      try {
+        const res = await fetch(`/api/alerts/${id}/history`);
+        const history = await res.json();
+
+        if (history.length === 0) {
+          empty.classList.remove("hidden");
+          return;
+        }
+
+        history.forEach(item => {
+          const tr = document.createElement("tr");
+          const dateStr = new Date(item.checked_at).toLocaleString('pt-BR');
+          tr.innerHTML = `
+            <td class="py-2.5 text-xs text-slate-500">${dateStr}</td>
+            <td class="py-2.5 font-bold text-slate-800">R$ ${item.price.toFixed(2)}</td>
+            <td class="py-2.5 text-xs text-slate-600">${item.airline || '—'}</td>
+            <td class="py-2.5 text-xs text-slate-500">${item.flight_details || '—'}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+      } catch (err) {
+        showToast("Erro ao carregar histórico.", "error");
+      }
+    }
+
+    // Disparar E-mail de Teste
+    async function sendTestEmailAction() {
+      const email = document.getElementById("test-email-input").value.trim();
+      if (!email) {
+        showToast("Informe um e-mail válido.", "error");
+        return;
+      }
+
+      const btn = document.getElementById("btn-send-test");
+      btn.disabled = true;
+      btn.innerText = "Enviando...";
+
+      try {
+        const res = await fetch("/api/test-email", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({ to_email: email })
+        });
+        const result = await res.json();
+        closeModal("test-email-modal");
+        
+        if (result.success) {
+          showToast(result.message, "success");
+        } else {
+          showToast(result.error || "Falha no envio.", "error");
+        }
+      } catch (err) {
+        showToast("Erro ao requisitar envio de teste.", "error");
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "Enviar Teste";
+      }
+    }
+  </script>
+</body>
+</html>

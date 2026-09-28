@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Oportunidade: Preço da Passagem Caiu!</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #f4f7fa;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      color: #334155;
+    }
+    .wrapper {
+      max-width: 600px;
+      margin: 30px auto;
+      background-color: #ffffff;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.06);
+      border: 1px solid #e2e8f0;
+    }
+    .header {
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 50%, #4f46e5 100%);
+      padding: 35px 30px;
+      text-align: center;
+      color: #ffffff;
+    }
+    .badge {
+      display: inline-block;
+      background-color: rgba(255, 255, 255, 0.22);
+      backdrop-filter: blur(8px);
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 26px;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+    .content {
+      padding: 32px 30px;
+    }
+    .greeting {
+      font-size: 16px;
+      color: #475569;
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+    .route-card {
+      background-color: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+      text-align: center;
+    }
+    .route-airports {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: 0.5px;
+    }
+    .route-arrow {
+      margin: 0 15px;
+      color: #2563eb;
+      font-size: 22px;
+    }
+    .price-box {
+      background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+      border: 1px solid #a7f3d0;
+      border-radius: 14px;
+      padding: 24px;
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .old-price {
+      font-size: 16px;
+      color: #64748b;
+      text-decoration: line-through;
+      margin-bottom: 6px;
+    }
+    .new-price {
+      font-size: 38px;
+      font-weight: 900;
+      color: #059669;
+      line-height: 1;
+      margin-bottom: 10px;
+    }
+    .savings-badge {
+      display: inline-block;
+      background-color: #10b981;
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: 700;
+      padding: 6px 14px;
+      border-radius: 9999px;
+    }
+    .details-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 30px;
+    }
+    .details-table td {
+      padding: 12px 0;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 15px;
+    }
+    .details-table td.label {
+      color: #64748b;
+      font-weight: 500;
+      width: 40%;
+    }
+    .details-table td.val {
+      color: #0f172a;
+      font-weight: 600;
+      text-align: right;
+    }
+    .btn-container {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .btn {
+      display: inline-block;
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      color: #ffffff !important;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 16px;
+      padding: 16px 36px;
+      border-radius: 12px;
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+    }
+    .footer {
+      background-color: #f8fafc;
+      padding: 24px 30px;
+      text-align: center;
+      border-top: 1px solid #e2e8f0;
+      font-size: 12px;
+      color: #94a3b8;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="header">
+      <div class="badge">✈️ Alerta de Passagem Aérea</div>
+      <h1>Boa notícia! O preço caiu para {{ destination }}</h1>
+    </div>
+
+    <div class="content">
+      <div class="greeting">
+        Olá, <strong>{{ client_name }}</strong>!<br>
+        O voo que você estava monitorando teve uma <strong>redução de preço</strong> imperdível. Confira os detalhes abaixo:
+      </div>
+
+      <div class="route-card">
+        <table style="width: 100%;">
+          <tr>
+            <td style="text-align: center; font-size: 24px; font-weight: 800; color: #0f172a;">
+              <span>{{ origin }}</span>
+              <span style="color: #2563eb; margin: 0 12px;">✈️</span>
+              <span>{{ destination }}</span>
+            </td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="price-box">
+        {% if old_price %}
+        <div class="old-price">De R$ {{ old_price|brl }}</div>
+        {% endif %}
+        <div class="new-price">R$ {{ new_price|brl }}</div>
+        {% if savings_val and savings_val > 0 %}
+        <div class="savings-badge">
+          Economia de R$ {{ savings_val|brl }} ({{ savings_pct }}% OFF)
+        </div>
+        {% endif %}
+      </div>
+
+      <table class="details-table">
+        <tr>
+          <td class="label">📅 Data de Ida:</td>
+          <td class="val">{{ departure_date }}</td>
+        </tr>
+        {% if return_date %}
+        <tr>
+          <td class="label">📅 Data de Volta:</td>
+          <td class="val">{{ return_date }}</td>
+        </tr>
+        {% endif %}
+        <tr>
+          <td class="label">🏢 Companhia Aérea:</td>
+          <td class="val">{{ airline or "Companhia Regular" }}</td>
+        </tr>
+        {% if flight_details %}
+        <tr>
+          <td class="label">ℹ️ Itinerário:</td>
+          <td class="val">{{ flight_details }}</td>
+        </tr>
+        {% endif %}
+        {% if max_target_price %}
+        <tr>
+          <td class="label">🎯 Seu Preço Teto:</td>
+          <td class="val">R$ {{ max_target_price|brl }}</td>
+        </tr>
+        {% endif %}
+      </table>
+
+      <div class="btn-container">
+        <a href="{{ booking_url }}" class="btn" target="_blank">
+          Ver Voos e Reservar Agora ✈️
+        </a>
+      </div>
+      <p style="text-align: center; font-size: 13px; color: #94a3b8; margin: 0;">
+        *Os preços das companhias aéreas são dinâmicos e podem esgotar a qualquer momento.
+      </p>
+    </div>
+
+    <div class="footer">
+      Você está recebendo este e-mail porque cadastrou um alerta no <strong>FlightWatch</strong>.<br>
+      Para gerenciar ou desativar este alerta, acesse seu painel.
+    </div>
+  </div>
+</body>
+</html>
