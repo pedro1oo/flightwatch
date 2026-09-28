@@ -2,6 +2,7 @@ services:
   - type: web
     name: flightwatch
     runtime: python
+    plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: python run.py
     envVars:
@@ -24,8 +25,5 @@ services:
       - key: CHECK_INTERVAL_MINUTES
         value: "60"
       - key: DATABASE_URL
-        value: sqlite:////var/data/flight_alerts.db
-    disk:
-      name: flightwatch-data
-      mountPath: /var/data
-      sizeGB: 1
+        value: sqlite:///./flight_alerts.db
+
